@@ -27,7 +27,7 @@ def kernel(X, z, a):
 
 def alpha(X, Y, z):
     d = len(X[0])
-    eps = 0.1 #LIST THIS
+    eps = 0.0001 #LIST THIS
     np = 10 #LIST THIS
     L = 5
 
@@ -47,6 +47,7 @@ if __name__ == "__main__":
     n = 200 # number of x samples
     m = n # number of y samples
     T = 1000 # number of iterations
+    eps = 1e-5
 
     X = np.random.uniform(0,1,(n,2))
     XMC = np.array(X)
@@ -109,7 +110,7 @@ if __name__ == "__main__":
         GyAn = 1/bsq*exp(norm(z)**2*(1/(2*aAn**4*bsq)-1/(2*aAn**2)))
         GAn = GxAn - GyAn
 
-        HMC = HMC/m
+        HMC = max(HMC/m, eps)
         HAn = 1/(2*pi)*(pi/csq)*exp(norm(z)**2*(1/(aAn**4*csq)-1/aAn**2))*(1+(1/(aAn**2*csq)-1)**2*norm(z)**2)
 
         print 'Gy with MC    =', GyMC
@@ -136,7 +137,7 @@ if __name__ == "__main__":
             plt.subplot(326)
             plt.title('Analytical')
             plt.scatter(XAn[:,0],XAn[:,1])
-            plt.show(block=False)
+            plt.show()#block=False)
             text = raw_input()
             plt.close()
 
@@ -220,7 +221,7 @@ if __name__ == "__main__":
             plt.subplot(326)
             plt.title('Analytical')
             plt.scatter(XAn[:,0],XAn[:,1])
-            plt.show(block=False)
+            plt.show()#block=False)
             text = raw_input()
             plt.close()
 
