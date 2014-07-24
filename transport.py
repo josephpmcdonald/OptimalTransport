@@ -28,10 +28,10 @@ def kernel(X, z, a):
 def alpha(X, Y, z):
     d = len(X[0])
     eps = 0.0001 #LIST THIS
-    np = 10 #LIST THIS
+    npoints = 10 #LIST THIS
     L = 5
 
-    a = (np/(n+m)*(1/(kernel(X,z,1)+eps) + 1/(kernel(Y, z, 1)+eps)))**(1/d)     #1/(2*pi)*sum([exp(-0.5*norm(y-z)**2) for y in Y])))**(1/d)
+    a = (npoints/(n+m)*(1/(kernel(X,z,1)+eps) + 1/(kernel(Y, z, 1)+eps)))**(1/d)     #1/(2*pi)*sum([exp(-0.5*norm(y-z)**2) for y in Y])))**(1/d)
     #a = max([a,eps])
     a = min(a,L)
 
@@ -44,10 +44,10 @@ if __name__ == "__main__":
     #fig.set_size_inches(8,8)
 
     d = 2
-    n = 200 # number of x samples
+    n = 1000 # number of x samples
     m = n # number of y samples
     T = 1000 # number of iterations
-    eps = 1e-5
+    eps = 1e-7
 
     X = np.random.uniform(0,1,(n,2))
     XMC = np.array(X)
@@ -107,12 +107,15 @@ if __name__ == "__main__":
         GMC = GxMC - GyMC
 
         #GyAn = 1/(2*pi)*(2*pi/bsq)*exp(norm(z)**2*(1/(2*aAn**4*bsq)-1/(2*aAn**2)))
-        GyAn = 1/bsq*exp(norm(z)**2*(1/(2*aAn**4*bsq)-1/(2*aAn**2)))
+        GyAn =1/(2*pi*aAn**2)*1/bsq*exp(norm(z)**2*(1/(2*aAn**4*bsq)-1/(2*aAn**2)))
         GAn = GxAn - GyAn
 
         HMC = max(HMC/m, eps)
-        HAn = 1/(2*pi)*(pi/csq)*exp(norm(z)**2*(1/(aAn**4*csq)-1/aAn**2))*(1+(1/(aAn**2*csq)-1)**2*norm(z)**2)
+        HAn =(1/(2*pi*aAn**4))**2*1/(2*pi)*(pi/csq)*exp(norm(z)**2*(1/(aAn**4*csq)-1/aAn**2))*(1+(1/(aAn**2*csq)-1)**2*norm(z)**2)
 
+        print 'z =', z
+        print 'aMC =', aMC
+        print 'GxMC =', GxMC
         print 'Gy with MC    =', GyMC
         print 'Gy analytical =', GyAn
         print 'H with MC     =', HMC
