@@ -269,13 +269,9 @@ def TransportCycle(X, centers, CenterFlag, betaMax, betaCap=True, grid=None):
 
     UpdateX(X, Z, betaAn, aAn)
 
-    if grid:
+    if (None != grid):
         UpdateX(grid, Z, betaAn, aAn)
 
-
-def Interpolate(Y):
-
-    return
 
 
 #################################################################
@@ -391,13 +387,13 @@ if __name__ == "__main__":
     d = 2  # dimensions
     n = 500 # number of x samples
     m = n # number of y samples
-    T = 10 # number of iterations
+    T = 11 # number of iterations
     eps = 1e-7
     centers = 5 
     betaMax = 500
     betaCap = True
     CenterFlag = 1 # CenterFlag determines how centers are distributed
-    plotSkip = 50 # Plot after plotSkip iterations
+    plotSkip = 10 # Plot after plotSkip iterations
     plotOn = True
 
     X = np.random.uniform(0,1,(n,d))
@@ -469,11 +465,11 @@ if __name__ == "__main__":
         print 't =', t
         print 'Z =', Z
         print 'aAn =', aAn
-        print 'GAn = ', GAn
+#        print 'GAn = ', GAn
 #        print 'GxAn =', GxAn
 #        print 'Gy analytical =', GyAn
-        print 'H analytical  =', HAn
-        print 'Analytical beta =', betaAn
+#        print 'H analytical  =', HAn
+#        print 'Analytical beta =', betaAn
         print 'Norm beta =', norm(betaAn)
         print 'Timing:', timing
 
@@ -486,9 +482,9 @@ if __name__ == "__main__":
     Y = Y.reshape(n,1)
     print 'min:', np.min(Y)
     print 'max:', np.max(Y)
-    YGrid = np.arange(np.min(Y)-1, np.max(Y)+1, .05)
-    YGrid = YGrid.reshape(len(YGrid),1)
-    print "YGrid =", YGrid
+    grid0 = np.arange(np.min(Y)-4, np.max(Y)+4, .05)
+    print "grid0 =", grid0
+    YGrid = grid0.reshape(len(grid0),1)
     for t in range(T):
 #        print '  ', t,'  ',
         TransportCycle(Y, 1, 1, 500, grid=YGrid)
@@ -497,14 +493,24 @@ if __name__ == "__main__":
 
 #, color, marker='o', cmap=matplotlib.cm.jet, norm=Norm)
 #        print '\r',
-    print "YGrid =", YGrid
+    #print "YGrid =", YGrid.reshape(YGrid.shape[0])
+    grid1 = YGrid.reshape(len(grid0))
+    print "grid1 =", grid1
 
-    
-
+    terp = interp1d(grid1, grid0)
     W = np.linalg.lstsq(XAn, Y)[0]
     Xreg = np.dot(XAn, W)
-#    for y in Xreg:
-#        if 
+    print "Xreg =", Xreg.reshape(n)
+#    Xregterp = terp(Xreg)
+
+    plt.clf()
+    plt.subplot(211)
+    plt.hist(Y, 50)
+    plt.subplot(212)
+    plt.hist(Xreg, 50)
+    plt.show()
+    raw_input()
+#    plt.hist(X, 50)
 
     print norm(np.dot(XAn, W) - Y)**2
 
