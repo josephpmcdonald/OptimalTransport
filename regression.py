@@ -201,17 +201,15 @@ def MakeBetas(G, Hinv, betaMax, betaCap, d=0, A=[]):
 
     betas = -np.dot(Hinv, G)
 
-    if (d == 1) and (len(A) == 1):
-        #TODO NOTE THIS ONLY TAKES CARE OF CASE OF 1 CENTER
-        bound = sqrt(2*pi)*A[0]**3
-        if abs(betas[0]) > bound:
-            betas = np.sign(betas)*bound
+#    if (d == 1) and (len(A) == 1):
+#        #TODO NOTE THIS ONLY TAKES CARE OF CASE OF 1 CENTER
+#        bound = sqrt(2*pi)*A[0]**3
+#        if abs(betas[0]) > bound:
+#            betas = np.sign(betas)*bound
 
     if norm(betas) > betaMax and betaCap:
         b = betaMax/norm(betas)
         betas = betas*b
-
-
 
     return betas
 
@@ -236,29 +234,12 @@ def UpdateX(X, Z, beta, a):
 
 
 def TransportCycle(X, centers, CenterFlag, betaMax, betaCap=True, grid=None):
-#    if (X.ndim == 1):
-#        n = X.shape[0]
-#        d = 1
-#    else:
-#        n, d = X.shape
 
     n, d = X.shape
 
     Z = MakeCenters(centers, d, CenterFlag)
     aAn = Alphas(X, Z)
     B, C, D = BCD(aAn)
-
-#    Gx = np.zeros(centers)
-#    Gy = np.empty(centers)
-#    G = np.empty(centers)
-#
-#    for i,z in enumerate(Z):
-#        for x in X:
-#            Gx[i] += F(x, z, aAn[i])
-#
-#        Gx[i] = Gx[i]/n
-#        Gy[i] = 1/((2*pi)**(d/2)*aAn[i]**d)*1/(B[i]**d)*exp(norm(z)**2*(1/(2*aAn[i]**4*B[i]**2)-1/(2*aAn[i]**2)))
-#        G[i] = Gx[i] - Gy[i]
 
     G = MakeG(X, Z, aAn, B)
     H = Hessian(Z, aAn, C, D)
@@ -269,7 +250,7 @@ def TransportCycle(X, centers, CenterFlag, betaMax, betaCap=True, grid=None):
 
     UpdateX(X, Z, betaAn, aAn)
 
-    if (None != grid):
+    if grid is None:
         UpdateX(grid, Z, betaAn, aAn)
 
 
@@ -393,7 +374,7 @@ if __name__ == "__main__":
     betaMax = 500
     betaCap = True
     CenterFlag = 1 # CenterFlag determines how centers are distributed
-    plotSkip = 10 # Plot after plotSkip iterations
+    plotSkip = 20 # Plot after plotSkip iterations
     plotOn = True
 
     X = np.random.uniform(0,1,(n,d))
@@ -477,7 +458,7 @@ if __name__ == "__main__":
             Plots(XAn, Y, XAnOld, Z, aAn)
 
 
-
+    print X
     Y = norm(X, axis=1)
     Y = Y.reshape(n,1)
     print 'min:', np.min(Y)
@@ -486,14 +467,15 @@ if __name__ == "__main__":
     print "grid0 =", grid0
     YGrid = grid0.reshape(len(grid0),1)
     for t in range(T):
-#        print '  ', t,'  ',
-        TransportCycle(Y, 1, 1, 500, grid=YGrid)
-        
+        TransportCycle(Y, 1, 1, 500, grid=YGrid) 
+        if plotOn and (t% plotSkip ==0):
+            plt.clf()
+            plt.hist(Y, 50)
+            plt.show()
+            raw_input()
 #        plt.scatter(YGrid.reshape(-1),np.zeros(len(YGrid)))
 
 #, color, marker='o', cmap=matplotlib.cm.jet, norm=Norm)
-#        print '\r',
-    #print "YGrid =", YGrid.reshape(YGrid.shape[0])
     grid1 = YGrid.reshape(len(grid0))
     print "grid1 =", grid1
 
