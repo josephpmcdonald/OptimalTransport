@@ -43,8 +43,8 @@ def kernel(X, z, a):
 
 def alpha(X, z):
     d = len(X[0])
-    eps = 0.0001 #LIST THIS
-    npoints = 10 #LIST THIS
+    eps = 0.0001 #TODO LIST THIS
+    npoints = 10 #TODO LIST THIS, typically set this to 10
     #L = 5
 
     #a = (npoints/(n+m)*(1/(kernel(X,z,1)+eps) + 1/(kernel(Y, z, 1)+eps)))**(1/d)
@@ -81,6 +81,7 @@ def V(d):
 
 
 def MakeCenters(num, d, flag=1):
+    #print 'MakeCenters d =', d#REMOVABLE
     # FLAG SETS HOW CENTERS WILL BE CONSTRUCTED
 
     if flag == 1:
@@ -146,6 +147,7 @@ def MakeG(X, Z, A, B):
     
     n, d = X.shape
     centers = Z.shape[0]
+    #print 'MakeG d =', d#REMOVABLE
 
     Gx = np.zeros(centers)
     Gy = np.empty(centers)
@@ -164,7 +166,8 @@ def MakeG(X, Z, A, B):
 
 
 def Hessian(Z, A, C, D):
-
+    d = len(Z[0])
+    #print 'Hessian d =', d#REMOVABLE
     centers = Z.shape[0]
 
     H = np.empty((centers, centers))
@@ -198,7 +201,8 @@ def Hessian(Z, A, C, D):
 
 
 def MakeBetas(G, Hinv, betaMax, betaCap, d=0, A=[]):
-
+    
+    #print 'MakeBetas d =', d#REMOVABLE
     betas = -np.dot(Hinv, G)
 
 #    if (d == 1) and (len(A) == 1):
@@ -238,29 +242,30 @@ def TransportCycle(X, centers, CenterFlag, betaMax, betaCap=True, grid=None):
     n, d = X.shape
 
     Z = MakeCenters(centers, d, CenterFlag)
-    aAn = Alphas(X, Z)
-    B, C, D = BCD(aAn)
+    a = Alphas(X, Z)
+    B, C, D = BCD(a)
 
-    G = MakeG(X, Z, aAn, B)
-    H = Hessian(Z, aAn, C, D)
+    G = MakeG(X, Z, a, B)
+    H = Hessian(Z, a, C, D)
     Hinv = np.linalg.inv(H)
-    betaAn = MakeBetas(G, Hinv, betaMax, betaCap, d, aAn)
+    betas = MakeBetas(G, Hinv, betaMax, betaCap, d, a)
 
 ########TODO CONSTRUCT JACOBIAN MATRIX (before or after update)###########
 
-    UpdateX(X, Z, betaAn, aAn)
+    UpdateX(X, Z, betas, a)
 
     if grid is None:
-        UpdateX(grid, Z, betaAn, aAn)
+        UpdateX(grid, Z, betas, a)
 
-
+    return (Z, a)
 
 #################################################################
 #################################################################
 #################################################################
 
-def PlotsOld(X, Z, aAn):
-
+def PlotsOld(X, Z, a):
+    
+    n, d = X.shape
     if d == 1:
         plt.hist(X, 50)
 #        plt.xlim((xmin, xmax))
@@ -270,7 +275,7 @@ def PlotsOld(X, Z, aAn):
 #        plt.xlim((xmin, xmax))
 #        plt.ylim((ymin, ymax))
         for i,z in enumerate(Z):
-            az.add_patch(plt.Circle(z, radius = aAn[i], fill=False, color='g'))
+            az.add_patch(plt.Circle(z, radius = a[i], fill=False, color='g'))
 
 
 
@@ -365,10 +370,10 @@ if __name__ == "__main__":
     plt.figure(1, figsize=(8,9))
     plt.show()
 
-    d = 2  # dimensions
+    d = 1  # dimensions
     n = 500 # number of x samples
     m = n # number of y samples
-    T = 11 # number of iterations
+    T = 100 # number of iterations
     eps = 1e-7
     centers = 5 
     betaMax = 500
@@ -377,7 +382,7 @@ if __name__ == "__main__":
     plotSkip = 20 # Plot after plotSkip iterations
     plotOn = True
 
-    X = np.random.uniform(0,1,(n,d))
+    X = np.random.uniform(0,1,(n, d))
     #X = np.random.multivariate_normal([-1,-1],[[2,0],[0,2]],n)
     XMC = np.array(X)#
     XAn = np.array(X)
@@ -391,7 +396,7 @@ if __name__ == "__main__":
     Norm = matplotlib.colors.Normalize(vmin = np.min(color), vmax = np.max(color), clip = False)
     timing = [0,0,0,0]
 
-    for t in xrange(T):
+    for t in range(T):
 
 ########TODO Use XAnOld to plot old points or plot old points with XAn at this time
         if (t-1)% plotSkip == 0 or t == 0:
@@ -458,19 +463,28 @@ if __name__ == "__main__":
             Plots(XAn, Y, XAnOld, Z, aAn)
 
 
-    print X
-    Y = norm(X, axis=1)
-    Y = Y.reshape(n,1)
+    #print X
+    Y = norm(X, axis=1)**2
+    Y = Y.reshape(n,1) 
+    #Y = np.random.uniform(0,1,(n, 1))
     print 'min:', np.min(Y)
     print 'max:', np.max(Y)
     grid0 = np.arange(np.min(Y)-4, np.max(Y)+4, .05)
     print "grid0 =", grid0
     YGrid = grid0.reshape(len(grid0),1)
-    for t in range(T):
-        TransportCycle(Y, 1, 1, 500, grid=YGrid) 
+    plt.clf()
+    plt.suptitle('t = 0')
+    plt.hist(Y, 50)
+    plt.show()
+    raw_input()
+    #plt.scatter(YGrid.reshape(-1),np.zeros(len(YGrid)))
+    for t in range(1,T+1):
+        Z, a = TransportCycle(Y, 5, 1, 500, grid=YGrid) 
         if plotOn and (t% plotSkip ==0):
             plt.clf()
+            plt.suptitle('t = %d' %t)
             plt.hist(Y, 50)
+            plt.plot([0],[0],'ro')
             plt.show()
             raw_input()
 #        plt.scatter(YGrid.reshape(-1),np.zeros(len(YGrid)))
@@ -483,8 +497,15 @@ if __name__ == "__main__":
     W = np.linalg.lstsq(XAn, Y)[0]
     Xreg = np.dot(XAn, W)
     print "Xreg =", Xreg.reshape(n)
-#    Xregterp = terp(Xreg)
-
+    Xregterp = terp(Xreg)
+    
+    plt.clf()
+    plt.suptitle('Xregterp')
+    plt.hist(Xregterp, 50)
+    plt.plot([0],[0],'ro')
+    plt.show()
+    raw_input()
+    
     plt.clf()
     plt.subplot(211)
     plt.hist(Y, 50)
