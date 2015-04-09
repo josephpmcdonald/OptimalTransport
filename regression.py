@@ -8,8 +8,9 @@ import random
 import matplotlib.colors
 import matplotlib.cm
 import time
-from scipy.interpolate import interp1d
+from scipy import interpolate
 
+interp1d = interpolate.interp1d
 
 norm = np.linalg.norm
 exp = math.exp
@@ -205,11 +206,11 @@ def MakeBetas(G, Hinv, betaMax, betaCap, d=0, A=[]):
     #print 'MakeBetas d =', d#REMOVABLE
     betas = -np.dot(Hinv, G)
 
-#    if (d == 1) and (len(A) == 1):
-#        #TODO NOTE THIS ONLY TAKES CARE OF CASE OF 1 CENTER
-#        bound = sqrt(2*pi)*A[0]**3
-#        if abs(betas[0]) > bound:
-#            betas = np.sign(betas)*bound
+    if (d == 1) and (len(A) == 1):
+        #TODO NOTE THIS ONLY TAKES CARE OF CASE OF 1 CENTER
+        bound = sqrt(2*pi)*A[0]**3
+        if abs(betas[0]) > bound:
+            betas = np.sign(betas)*bound
 
     if norm(betas) > betaMax and betaCap:
         b = betaMax/norm(betas)
@@ -254,7 +255,7 @@ def TransportCycle(X, centers, CenterFlag, betaMax, betaCap=True, grid=None):
 
     UpdateX(X, Z, betas, a)
 
-    if grid is None:
+    if not grid is None:
         UpdateX(grid, Z, betas, a)
 
     return (Z, a)
@@ -373,19 +374,19 @@ if __name__ == "__main__":
     d = 1  # dimensions
     n = 500 # number of x samples
     m = n # number of y samples
-    T = 100 # number of iterations
+    T = 1000 # number of iterations
     eps = 1e-7
     centers = 5 
     betaMax = 500
     betaCap = True
     CenterFlag = 1 # CenterFlag determines how centers are distributed
-    plotSkip = 20 # Plot after plotSkip iterations
+    plotSkip = 50 # Plot after plotSkip iterations
     plotOn = True
 
     X = np.random.uniform(0,1,(n, d))
     #X = np.random.multivariate_normal([-1,-1],[[2,0],[0,2]],n)
-    XMC = np.array(X)#
-    XAn = np.array(X)
+    XMC = np.copy(X)#
+    XAn = np.copy(X)
     mean = np.zeros(d)
     cov = np.eye(d)
     Y = np.random.multivariate_normal(mean,cov,n)
@@ -396,7 +397,7 @@ if __name__ == "__main__":
     Norm = matplotlib.colors.Normalize(vmin = np.min(color), vmax = np.max(color), clip = False)
     timing = [0,0,0,0]
 
-    for t in range(T):
+    for t in range(T + 1):
 
 ########TODO Use XAnOld to plot old points or plot old points with XAn at this time
         if (t-1)% plotSkip == 0 or t == 0:
@@ -461,17 +462,21 @@ if __name__ == "__main__":
 
         if plotOn and (t% plotSkip == 0):
             Plots(XAn, Y, XAnOld, Z, aAn)
+            if t == T:
+                raw_input()
 
 
     #print X
-    Y = norm(X, axis=1)**2
-    Y = Y.reshape(n,1) 
+    Y0 = norm(X, axis=1)**2
+    Y0 = Y0.reshape(n,1)
+    Y = np.copy(Y0)
     #Y = np.random.uniform(0,1,(n, 1))
     print 'min:', np.min(Y)
     print 'max:', np.max(Y)
     grid0 = np.arange(np.min(Y)-4, np.max(Y)+4, .05)
-    print "grid0 =", grid0
-    YGrid = grid0.reshape(len(grid0),1)
+    print 'grid0 =', grid0
+    YGrid = np.copy(grid0.reshape(len(grid0),1))
+    #print "YGrid =", YGrid
     plt.clf()
     plt.suptitle('t = 0')
     plt.hist(Y, 50)
@@ -479,41 +484,48 @@ if __name__ == "__main__":
     raw_input()
     #plt.scatter(YGrid.reshape(-1),np.zeros(len(YGrid)))
     for t in range(1,T+1):
-        Z, a = TransportCycle(Y, 5, 1, 500, grid=YGrid) 
+        Z, a = TransportCycle(Y, 1, 1, 500, grid=YGrid) 
         if plotOn and (t% plotSkip ==0):
             plt.clf()
             plt.suptitle('t = %d' %t)
             plt.hist(Y, 50)
             plt.plot([0],[0],'ro')
             plt.show()
+            plt.show()
             raw_input()
 #        plt.scatter(YGrid.reshape(-1),np.zeros(len(YGrid)))
 
 #, color, marker='o', cmap=matplotlib.cm.jet, norm=Norm)
     grid1 = YGrid.reshape(len(grid0))
-    print "grid1 =", grid1
+    print 'grid1 =', grid1
 
-    terp = interp1d(grid1, grid0)
+    terp = interp1d(grid1, grid0, assume_sorted=True)
+
     W = np.linalg.lstsq(XAn, Y)[0]
     Xreg = np.dot(XAn, W)
-    print "Xreg =", Xreg.reshape(n)
     Xregterp = terp(Xreg)
-    
+    Xregterp = Xregterp.reshape(n,1)
+
     plt.clf()
+    plt.subplot(211)
+    plt.title('Y')
+    plt.hist(Y, 50)
+    plt.subplot(212)
+    plt.title('Xreg')
+    plt.hist(Xreg, 50)
+    plt.show()
+    raw_input()
+
+    plt.clf()
+    plt.subplot(211)
+    plt.title('Original Y')
+    plt.hist(Y0, 50)
+    plt.subplot(212)
     plt.suptitle('Xregterp')
     plt.hist(Xregterp, 50)
     plt.plot([0],[0],'ro')
     plt.show()
     raw_input()
-    
-    plt.clf()
-    plt.subplot(211)
-    plt.hist(Y, 50)
-    plt.subplot(212)
-    plt.hist(Xreg, 50)
-    plt.show()
-    raw_input()
-#    plt.hist(X, 50)
 
     print norm(np.dot(XAn, W) - Y)**2
 
