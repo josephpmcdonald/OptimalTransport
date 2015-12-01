@@ -221,7 +221,7 @@ def MakeBetas(G, Hinv, betaMax, betaCap, d=0, A=[]):
 
 
 
-def UpdateX(X, Z, beta, a):
+def Update(X, Z, beta, a):
 
     n, d = X.shape
 
@@ -251,13 +251,12 @@ def TransportCycle(X, centers, CenterFlag, betaMax, betaCap=True, grid=None):
     H = Hessian(Z, a, C, D)
     Hinv = np.linalg.inv(H)
     betas = MakeBetas(G, Hinv, betaMax, betaCap, d, a)
+    Update(X, Z, betas, a)
 
 ########TODO CONSTRUCT JACOBIAN MATRIX (before or after update)###########
 
-    UpdateX(X, Z, betas, a)
-
     if not grid is None:
-        UpdateX(grid, Z, betas, a)
+        Update(grid, Z, betas, a)
 
     return (Z, a)
 
@@ -419,12 +418,11 @@ if __name__ == "__main__":
 ##############PLOTS OLD POINTS HERE
 #        if plotOn and (t% plotSkip == 0):
 #            PlotsOld(XAn, Z, aAn)
-
-
+#
 #        GxAn = np.zeros(centers)
 #        GyAn = np.empty(centers)
 #        GAn = np.empty(centers)
-        
+#        
 #        for i,z in enumerate(Z):
 #            for x in XAn:
 #                GxAn[i] += F(x, z, aAn[i])
@@ -445,7 +443,7 @@ if __name__ == "__main__":
         betaAn = MakeBetas(GAn, Hinv, betaMax, betaCap)
 
         T3 = time.time()
-        UpdateX(XAn, Z, betaAn, aAn)
+        Update(XAn, Z, betaAn, aAn)
         T4 = time.time()
 
 ########TODO CONSTRUCT JACOBIAN MATRIX (before or after update)###########
@@ -504,7 +502,7 @@ if __name__ == "__main__":
             plt.draw()
             plt.draw()
             #raw_input()
-#        plt.scatter(YGrid.reshape(-1),np.zeros(len(YGrid)))
+        #plt.scatter(YGrid.reshape(-1),np.zeros(len(YGrid)))
 
 #, color, marker='o', cmap=matplotlib.cm.jet, norm=Norm)
     grid1 = YGrid.reshape(len(grid0))
