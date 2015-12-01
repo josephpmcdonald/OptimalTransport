@@ -9,6 +9,7 @@ import matplotlib.colors
 import matplotlib.cm
 import time
 from scipy import interpolate
+import pickle
 
 interp1d = interpolate.interp1d
 
@@ -18,8 +19,8 @@ log = math.log
 pi = math.pi
 sqrt = math.sqrt
 inner = np.inner
-npexp = np.vectorize(math.exp)
-
+#npexp = np.vectorize(math.exp)
+npexp = np.exp
 
 def F(x, z, a):
     #xmzovera = [(x-z)/a for i in range(len(x))]
@@ -315,9 +316,11 @@ def Plots(XAn, Y, XAnOld, Z, aAn):
     ax = plt.subplot(324)
     plt.title('Analytical')
     if d == 1:
-        plt.hist(XAn, 50)
-        plt.plot(Z,[0]*centers,'ro')
         plt.xlim((xmin, xmax))
+        plt.hist(XAn, 50, normed=1)
+        plt.plot(Z,[0]*centers,'ro')
+        grid = np.linspace(xmin, xmax, 50)
+        plt.plot(grid, 1/sqrt(2*pi)*np.exp(-grid**2/2),'--r')
     else:
         plt.xlim((xmin, xmax))
         plt.ylim((ymin, ymax))
@@ -374,7 +377,7 @@ if __name__ == "__main__":
     d = 1  # dimensions
     n = 500 # number of x samples
     m = n # number of y samples
-    T = 1000 # number of iterations
+    T = 500 # number of iterations
     eps = 1e-7
     centers = 5 
     betaMax = 500
@@ -383,8 +386,14 @@ if __name__ == "__main__":
     plotSkip = 50 # Plot after plotSkip iterations
     plotOn = True
 
-    X = np.random.uniform(0,1,(n, d))
+
+    X = np.random.uniform(0,1,(n,d))
     #X = np.random.multivariate_normal([-1,-1],[[2,0],[0,2]],n)
+    #X = np.concatenate((np.random.multivariate_normal([-1],[[0.25]],250), np.random.multivariate_normal([0.5],[[.25]],250)))
+
+    n = len(X)
+    m = n
+
     XMC = np.copy(X)#
     XAn = np.copy(X)
     mean = np.zeros(d)
@@ -467,7 +476,9 @@ if __name__ == "__main__":
 
 
     #print X
-    Y0 = norm(X, axis=1)**2
+    #Y0 = norm(X, axis=1)**2+0.1*np.random.randn(n)
+    #Y0 = npexp(X).reshape(n,)+0.1*np.random.randn(n)
+    Y0 = np.arcsin(X)+0.03*np.random.randn(n,1)
     Y0 = Y0.reshape(n,1)
     Y = np.copy(Y0)
     #Y = np.random.uniform(0,1,(n, 1))
@@ -478,21 +489,21 @@ if __name__ == "__main__":
     YGrid = np.copy(grid0.reshape(len(grid0),1))
     #print "YGrid =", YGrid
     plt.clf()
-    plt.suptitle('t = 0')
+    plt.suptitle('Y, t = 0')
     plt.hist(Y, 50)
     plt.show()
-    raw_input()
+    raw_input('Press Enter to continue')
     #plt.scatter(YGrid.reshape(-1),np.zeros(len(YGrid)))
     for t in range(1,T+1):
         Z, a = TransportCycle(Y, 1, 1, 500, grid=YGrid) 
         if plotOn and (t% plotSkip ==0):
             plt.clf()
-            plt.suptitle('t = %d' %t)
+            plt.suptitle('Y, t = %d' %t)
             plt.hist(Y, 50)
             plt.plot([0],[0],'ro')
-            plt.show()
-            plt.show()
-            raw_input()
+            plt.draw()
+            plt.draw()
+            #raw_input()
 #        plt.scatter(YGrid.reshape(-1),np.zeros(len(YGrid)))
 
 #, color, marker='o', cmap=matplotlib.cm.jet, norm=Norm)
@@ -506,6 +517,35 @@ if __name__ == "__main__":
     Xregterp = terp(Xreg)
     Xregterp = Xregterp.reshape(n,1)
 
+    #Plot transported Y against the LSQReg W*Xtransported
+    plt.clf()
+    plt.subplot(111)
+    plt.title('Y vs. f(X) (regressed)')
+    plt.plot(Y, Xreg, 'o')
+    plt.show()
+    raw_input()
+
+    #Plot original Y against interpolated W*Xtransported
+    plt.clf()
+    plt.subplot(111)
+    plt.title('y vs. interpolated f(X)')
+    plt.plot(Y0, Xregterp, 'o')
+    xmin, xmax = plt.xlim()
+    xline = np.arange(xmin, xmax, 0.1)
+    plt.plot(xline, xline, 'k--') 
+    plt.show()
+    raw_input()
+
+    #Plot X against interpolated W*Xtransported
+    plt.clf()
+    plt.subplot(111)
+    plt.plot(X, Y0, 'o')
+    plt.title('x vs. y and x vs. interpolated W*X')
+    plt.plot(X, Xregterp, 'go')
+    plt.show()
+    raw_input()
+
+    #Distributions of transported Y and W*Xtransported
     plt.clf()
     plt.subplot(211)
     plt.title('Y')
@@ -516,12 +556,13 @@ if __name__ == "__main__":
     plt.show()
     raw_input()
 
+    #Distributions of original Y and interpolated W*Xtransported
     plt.clf()
     plt.subplot(211)
-    plt.title('Original Y')
+    plt.title('y')
     plt.hist(Y0, 50)
     plt.subplot(212)
-    plt.suptitle('Xregterp')
+    plt.title('interpolated f(X)')
     plt.hist(Xregterp, 50)
     plt.plot([0],[0],'ro')
     plt.show()
