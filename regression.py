@@ -1,12 +1,12 @@
 from __future__ import division
 import math
 import numpy as np
-#import argparse
-import matplotlib.pyplot as plt
 import random
 #import scipy.cluster.vq as vq
+import matplotlib.pyplot as plt
 import matplotlib.colors
 import matplotlib.cm
+from mpl_toolkits.mplot3d import Axes3D
 import time
 from scipy import interpolate
 import pickle
@@ -164,8 +164,8 @@ def MakeG(X, Z, A, B):
         G[i] = Gx[i] - Gy[i]
 
     return G
-
-
+    
+    
 
 def Hessian(Z, A, C, D):
     d = len(Z[0])
@@ -239,7 +239,7 @@ def Update(X, Z, beta, a):
 
 
 
-def TransportCycle(X, centers, CenterFlag, betaMax, betaCap=True, grid=None):
+def TransportCycle(X, centers, CenterFlag, betaMax, betaCap=True, grid=None, stepsize=0):
 
     n, d = X.shape
 
@@ -248,9 +248,16 @@ def TransportCycle(X, centers, CenterFlag, betaMax, betaCap=True, grid=None):
     B, C, D = BCD(a)
 
     G = MakeG(X, Z, a, B)
-    H = Hessian(Z, a, C, D)
-    Hinv = np.linalg.inv(H)
-    betas = MakeBetas(G, Hinv, betaMax, betaCap, d, a)
+
+    #Newton's Method
+    if stepsize == 0:
+        H = Hessian(Z, a, C, D)
+        Hinv = np.linalg.inv(H)
+        betas = MakeBetas(G, Hinv, betaMax, betaCap, d, a)
+    #Gradient Descent
+    else:
+        betas = -G*stepsize
+
     Update(X, Z, betas, a)
 
 ########TODO CONSTRUCT JACOBIAN MATRIX (before or after update)###########
@@ -373,10 +380,10 @@ if __name__ == "__main__":
     plt.figure(1, figsize=(8,9))
     plt.show()
 
-    d = 1  # dimensions
+    d = 2  # dimensions
     n = 500 # number of x samples
     m = n # number of y samples
-    T = 500 # number of iterations
+    T = 5000 # number of iterations
     eps = 1e-7
     centers = 5 
     betaMax = 500
@@ -397,7 +404,7 @@ if __name__ == "__main__":
     XAn = np.copy(X)
     mean = np.zeros(d)
     cov = np.eye(d)
-    Y = np.random.multivariate_normal(mean,cov,n)
+    Target = np.random.multivariate_normal(mean,cov,n)
 #    Xstar = np.random.uniform(0,1,(nstar,d))
 #    Xstarold = np.array(Xstar)
 
@@ -411,9 +418,12 @@ if __name__ == "__main__":
         if (t-1)% plotSkip == 0 or t == 0:
             XAnOld = np.copy(XAn)
 
-        Z = MakeCenters(centers, d, CenterFlag)
-        aAn = Alphas(XAn, Z)
-        B, C, D = BCD(aAn)
+        if True:
+            Z, aAn = TransportCycle(XAn, centers, CenterFlag, betaMax, betaCap, stepsize=exp(-t**2/100.))
+        else:
+            Z = MakeCenters(centers, d, CenterFlag)
+            aAn = Alphas(XAn, Z)
+            B, C, D = BCD(aAn)
 
 ##############PLOTS OLD POINTS HERE
 #        if plotOn and (t% plotSkip == 0):
@@ -432,25 +442,25 @@ if __name__ == "__main__":
 #            GAn[i] = GxAn[i] - GyAn[i]
 
 
-        T0 = time.time()
-        GAn = MakeG(XAn, Z, aAn, B)
+            T0 = time.time()
+            GAn = MakeG(XAn, Z, aAn, B)
 
-        T1 = time.time()
-        HAn = Hessian(Z, aAn, C, D)
-        Hinv = np.linalg.inv(HAn)
+            T1 = time.time()
+            HAn = Hessian(Z, aAn, C, D)
+            Hinv = np.linalg.inv(HAn)
 
-        T2 = time.time()
-        betaAn = MakeBetas(GAn, Hinv, betaMax, betaCap)
+            T2 = time.time()
+            betaAn = MakeBetas(GAn, Hinv, betaMax, betaCap)
 
-        T3 = time.time()
-        Update(XAn, Z, betaAn, aAn)
-        T4 = time.time()
+            T3 = time.time()
+            Update(XAn, Z, betaAn, aAn)
+            T4 = time.time()
 
 ########TODO CONSTRUCT JACOBIAN MATRIX (before or after update)###########
-        timing[0] += T1 - T0
-        timing[1] += T2 - T1
-        timing[2] += T3 - T2
-        timing[3] += T4 - T3
+            timing[0] += T1 - T0
+            timing[1] += T2 - T1
+            timing[2] += T3 - T2
+            timing[3] += T4 - T3
 
 ########TODO COMPUTE COST OF TRANSPORT###############
 
@@ -459,24 +469,24 @@ if __name__ == "__main__":
         print 't =', t
         print 'Z =', Z
         print 'aAn =', aAn
-#        print 'GAn = ', GAn
-#        print 'GxAn =', GxAn
-#        print 'Gy analytical =', GyAn
-#        print 'H analytical  =', HAn
-#        print 'Analytical beta =', betaAn
-        print 'Norm beta =', norm(betaAn)
-        print 'Timing:', timing
+        #print 'GAn = ', GAn
+        #print 'GxAn =', GxAn
+        #print 'Gy analytical =', GyAn
+        #print 'H analytical  =', HAn
+        #print 'Analytical beta =', betaAn
+        #print 'Norm beta =', norm(betaAn)
+        #print 'Timing:', timing
 
         if plotOn and (t% plotSkip == 0):
-            Plots(XAn, Y, XAnOld, Z, aAn)
+            Plots(XAn, Target, XAnOld, Z, aAn)
             if t == T:
                 raw_input()
 
 
     #print X
-    #Y0 = norm(X, axis=1)**2+0.1*np.random.randn(n)
+    Y0 = norm(X, axis=1)**2+0.1*np.random.randn(n)
     #Y0 = npexp(X).reshape(n,)+0.1*np.random.randn(n)
-    Y0 = np.arcsin(X)+0.03*np.random.randn(n,1)
+    #Y0 = np.arcsin(X)+0.03*np.random.randn(n,1)
     Y0 = Y0.reshape(n,1)
     Y = np.copy(Y0)
     #Y = np.random.uniform(0,1,(n, 1))
